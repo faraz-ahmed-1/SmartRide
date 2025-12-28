@@ -1,0 +1,22 @@
+{
+  "name": "smartride-server",
+  "version": "1.0.0",
+  "description": "Backend server for SmartRide application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/faraz-ahmed-1/SmartRide.git"
+  },
+  "author": "Faraz Ahmed",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/faraz-ahmed-1/SmartRide/issues"
+  },
+  "homepage": "https://github.com/faraz-ahmed-1/SmartRide#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
