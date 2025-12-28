@@ -1,69 +1,75 @@
 require("dotenv").config();
 const express = require("express");
-const bodyParser = require("body-parser");
 const mysql = require("mysql2");
 const cors = require("cors");
 const path = require("path");
 
 const app = express();
-app.use(bodyParser.json());
-app.use(cors());
 
-// Serve frontend files (for HTML, CSS, JS)
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Serve frontend files
 app.use(express.static(path.join(__dirname, "public")));
 
-// ✅ Database connection (works locally + on Railway)
+// 🔒 Local MySQL connection ONLY
 const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT
+  host: "localhost",
+  user: "root",
+  password: "",       // put your local MySQL password
+  database: "smartride",
+  port: 3306
 });
 
 db.connect((err) => {
   if (err) {
-    console.error("❌ Database connection failed:", err);
-  } else {
-    console.log("✅ Connected to MySQL Database");
+    console.error("❌ MySQL connection failed:", err.message);
+    return;
   }
+  console.log("✅ Connected to local MySQL database");
 });
 
 // --- Sign Up API ---
-app.post('/api/signup', async (req, res) => {
-  try {
-    const { name, email, contact, gender, role } = req.body;
+app.post("/api/signup", (req, res) => {
+  const { name, email, contact, gender, role } = req.body;
 
-    if (!name || !email || !contact || !gender || !role) {
-      return res.status(400).json({ error: 'All fields are required' });
+  if (!name || !email || !contact || !gender || !role) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  const checkSql = "SELECT id FROM Users WHERE Email = ? OR Contact = ?";
+  db.query(checkSql, [email, contact], (err, results) => {
+    if (err) {
+      console.error("❌ Check user error:", err);
+      return res.status(500).json({ error: "Server error" });
     }
 
-    // 1️⃣ Check if user already exists
-    const checkSql = `SELECT * FROM Users WHERE email = ? OR contact = ?`;
-    db.query(checkSql, [email, contact], async (err, results) => {
+    if (results.length > 0) {
+      return res.status(409).json({ error: "User already exists" });
+    }
+
+    const insertSql = `
+      INSERT INTO Users (Name, Email, Contact, Gender, Role)
+      VALUES (?, ?, ?, ?, ?)
+    `;
+
+    db.query(insertSql, [name, email, contact, gender, role], (err, result) => {
       if (err) {
-        console.error('Error checking user:', err);
-        return res.status(500).json({ error: 'Server error' });
-      }
-      if (results.length > 0) {
-        return res.status(400).json({ error: 'User already exists' });
+        console.error("❌ Insert error:", err);
+        return res.status(500).json({ error: "Failed to add user" });
       }
 
-      // 3️⃣ Insert new user
-      const insertSql = `
-        INSERT INTO Users (Name, Email, Contact, Gender, Role)
-        VALUES (?, ?, ?, ?, ?)
-      `;
-      db.query(insertSql, [name, email, contact, gender, role], (err, result) => {
-        if (err) {
-          console.error('Error inserting user:', err);
-          return res.status(500).json({ error: 'Failed to add user' });
-        }
-        res.status(201).json({ message: 'User added successfully', userId: result.insertId });
+      res.status(201).json({
+        message: "User added successfully",
+        userId: result.insertId
       });
     });
-  } catch (err) {
-    console.error('Signup error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
+  });
+});
+
+// 🔥 Local server only
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Local server running at http://localhost:${PORT}`);
 });
