@@ -1,3 +1,5 @@
+// server.js (LOCAL + ENV)
+
 require("dotenv").config();
 const express = require("express");
 const mysql = require("mysql2");
@@ -6,20 +8,20 @@ const path = require("path");
 
 const app = express();
 
-// Middleware
+/* ---------------- Middleware ---------------- */
 app.use(cors());
 app.use(express.json());
 
-// Serve frontend files
+// Serve frontend
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔒 Local MySQL connection ONLY
+/* ---------------- MySQL (Local via ENV) ---------------- */
 const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "",       // put your local MySQL password
-  database: "smartride",
-  port: 3306
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  port: Number(process.env.DB_PORT)
 });
 
 db.connect((err) => {
@@ -30,7 +32,7 @@ db.connect((err) => {
   console.log("✅ Connected to local MySQL database");
 });
 
-// --- Sign Up API ---
+/* ---------------- Sign Up API ---------------- */
 app.post("/api/signup", (req, res) => {
   const { name, email, contact, gender, role } = req.body;
 
@@ -38,7 +40,9 @@ app.post("/api/signup", (req, res) => {
     return res.status(400).json({ error: "All fields are required" });
   }
 
-  const checkSql = "SELECT id FROM Users WHERE Email = ? OR Contact = ?";
+  const checkSql =
+    "SELECT id FROM Users WHERE Email = ? OR Contact = ?";
+
   db.query(checkSql, [email, contact], (err, results) => {
     if (err) {
       console.error("❌ Check user error:", err);
@@ -61,15 +65,16 @@ app.post("/api/signup", (req, res) => {
       }
 
       res.status(201).json({
-        message: "User added successfully",
+        message: "User registered successfully",
         userId: result.insertId
       });
     });
   });
 });
 
-// 🔥 Local server only
-const PORT = 3000;
+/* ---------------- Start Local Server ---------------- */
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log(`🚀 Local server running at http://localhost:${PORT}`);
 });

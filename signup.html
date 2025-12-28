@@ -1,221 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Account</title>
-    <link rel="shortcut icon" href="FAVICON.png" type="image/x-icon">
-    <style>
-        :root {
-            --primary: #4285f4;
-            --primary-dark: #3367d6;
-            --secondary: #34a853;
-            --error: #ea4335;
-            --text: #202124;
-            --text-light: #5f6368;
-            --border: #dadce0;
-            --bg: #f8f9fa;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        }
-        
-        body {
-            background-color: var(--bg);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-image: radial-gradient(circle at top right, rgba(66, 133, 244, 0.1) 0%, transparent 50%);
-        }
-        
-        .login-container {
-            width: 100%;
-            max-width: 420px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            margin: 20px;
-        }
-        
-        .logo {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
-        .logo h1 {
-            color: var(--primary);
-            font-size: 28px;
-            font-weight: 500;
-            letter-spacing: -0.5px;
-        }
-        
-        .logo p {
-            color: var(--text-light);
-            font-size: 14px;
-            margin-top: 8px;
-        }
-        
-        .input-group {
-            margin-bottom: 20px;
-            position: relative;
-        }
-        
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--text);
-            font-size: 14px;
-            font-weight: 500;
-        }
-        
-        .input-group input {
-            width: 100%;
-            padding: 14px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-size: 16px;
-            transition: border 0.3s;
-        }
-        
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
-        }
-        
-        .password-toggle {
-            position: absolute;
-            right: 12px;
-            top: 40px;
-            cursor: pointer;
-            color: var(--text-light);
-        }
-        
-        .remember-forgot {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .remember-me {
-            display: flex;
-            align-items: center;
-        }
-        
-        .remember-me input {
-            margin-right: 8px;
-        }
-        
-        .forgot-password a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-        
-        .forgot-password a:hover {
-            text-decoration: underline;
-        }
-        
-        button {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        button:hover {
-            background-color: var(--primary-dark);
-        }
-        
-        .divider {
-            display: flex;
-            align-items: center;
-            margin: 24px 0;
-            color: var(--text-light);
-            font-size: 14px;
-        }
-        
-        .divider::before,
-        .divider::after {
-            content: "";
-            flex: 1;
-            border-bottom: 1px solid var(--border);
-        }
-        
-        .divider::before {
-            margin-right: 16px;
-        }
-        
-        .divider::after {
-            margin-left: 16px;
-        }
-        
-        .social-login {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-        
-        .social-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 1px solid var(--border);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .social-btn:hover {
-            background-color: var(--bg);
-            transform: translateY(-2px);
-        }
-        
-        .signup-link {
-            text-align: center;
-            font-size: 14px;
-            color: var(--text-light);
-        }
-        
-        .signup-link a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-        
-        .signup-link a:hover {
-            text-decoration: underline;
-        }
-        
-        .error-message{
-            color: var(--error);
-            font-size: 13px;
-            margin-top: 4px;
-            display: none;
-        }
-        
-        input.error {
-            border-color: var(--error);
-        }
-        
-        @media (max-width: 768px) {
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account</title>
+<link rel="shortcut icon" href="SmartRide.png" type="image/x-icon">
+<style>
+:root {
+    --primary: #4285f4;
+    --primary-dark: #3367d6;
+    --secondary: #34a853;
+    --error: #ea4335;
+    --text: #202124;
+    --text-light: #5f6368;
+    --border: #dadce0;
+    --bg: #f8f9fa;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+body {
+    background-color: var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-image: radial-gradient(circle at top right, rgba(66, 133, 244, 0.1) 0%, transparent 50%);
+}
+
+.login-container {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 40px 30px;
+    margin: 20px;
+}
+
+.logo {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.logo h1 {
+    color: var(--primary);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+.logo p {
+    color: var(--text-light);
+    font-size: 14px;
+    margin-top: 6px;
+}
+
+.input-group {
+    margin-bottom: 18px;
+    position: relative;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(66,133,244,0.15);
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 40px;
+    cursor: pointer;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.error-message {
+    color: var(--error);
+    font-size: 13px;
+    margin-top: 4px;
+    display: none;
+}
+
+input.error,
+select.error {
+    border-color: var(--error);
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+button:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    margin: 24px 0;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.divider::before,
+.divider::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+
+.divider::before {
+    margin-right: 16px;
+}
+
+.divider::after {
+    margin-left: 16px;
+}
+
+.signup-link {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.signup-link a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.signup-link a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
     body {
         padding: 10px;
-        align-items: flex-start; /* Avoid too much vertical stretching */
+        align-items: flex-start;
     }
 
     .login-container {
@@ -223,8 +180,8 @@
         margin: 0 auto;
         width: 100%;
         max-width: 100%;
-        border-radius: 6px;
-        box-shadow: none; /* reduce shadow for mobile simplicity */
+        border-radius: 8px;
+        box-shadow: none;
     }
 
     .logo h1 {
@@ -239,7 +196,8 @@
         font-size: 13px;
     }
 
-    .input-group input {
+    .input-group input,
+    .input-group select {
         padding: 12px;
         font-size: 14px;
     }
@@ -254,16 +212,6 @@
         padding: 12px;
         font-size: 15px;
     }
-
-    .remember-forgot {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .signup-link {
-        font-size: 13px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -275,7 +223,7 @@
         font-size: 20px;
     }
 
-    button, input {
+    button, input, select {
         padding: 10px;
         font-size: 14px;
     }
@@ -284,67 +232,67 @@
         font-size: 12px;
     }
 }
-
-    </style>
+</style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="logo">
-            <h1>Create Account</h1>
-            <p>Start your journey with us</p>
+<div class="login-container">
+    <div class="logo">
+        <h1>Register</h1>
+        <p>Start your journey with us</p>
+    </div>
+
+    <form id="loginForm">
+        <div class="input-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" placeholder="Enter your full name" required>
+            <div class="error-message" id="name-error">Please enter your name</div>
         </div>
-        
-        <form id="loginForm">
-            <div class="input-group">
-                <label for="name">Full Name</label>
-                <input type="text" id="name" placeholder="Enter your full name" required>
-                <div class="error-message" id="name-error">Please enter your name</div>
-            </div>
 
-            <div class="input-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" placeholder="Enter your email" required>
-                <div class="error-message" id="email-error">Please enter a valid email</div>
-                <div class="error-message" id="email-exist">Email Exist</div>
-            </div>
-            
-            <div class="input-group">
-                <label for="Phone">Phone</label>
-                <input type="number" id="Phone" placeholder="Contact" required>
-                <div class="error-message" id="password-error">Phone number must be at least 11 characters</div>
-            </div>
+        <div class="input-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="Enter your email" required>
+            <div class="error-message" id="email-error">Please enter a valid email</div>
+            <div class="error-message" id="email-exist">Email already exists</div>
+        </div>
 
-            <div class="input-group">
-                <label for="gender">Gender</label>
-                <select id="gender" name="gender" required>
+        <div class="input-group">
+            <label for="Phone">Phone</label>
+            <input type="text" id="Phone" placeholder="Contact" required>
+            <div class="error-message" id="phone-error">Phone number must be at least 11 digits</div>
+        </div>
+
+        <div class="input-group">
+            <label for="gender">Gender</label>
+            <select id="gender" required>
                 <option value="" disabled selected>Select Gender</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
-                </select>
-                <div class="error-message" id="gender-error">Please select a gender</div>
-            </div>
+            </select>
+            <div class="error-message" id="gender-error">Please select a gender</div>
+        </div>
 
-            <div class="input-group">
-                <label for="role">Role</label>
-                <select id="role" name="role" required>
+        <div class="input-group">
+            <label for="role">Role</label>
+            <select id="role" required>
                 <option value="" disabled selected>Select Role</option>
                 <option value="Passenger">Passenger</option>
                 <option value="Driver">Driver</option>
-                </select>
-                <div class="error-message" id="gender-error">Please select a Role</div>
-            </div>
-            
-            <button type="submit">Create Account</button>
-        </form>
-        
-        <div class="divider">OR</div>
-        
-        <div class="signup-link">
-            Already have an account? <a href="index.html">Log in</a>
+            </select>
+            <div class="error-message" id="role-error">Please select a role</div>
         </div>
+
+        <button type="submit">Create Account</button>
+    </form>
+
+    <div class="divider">OR</div>
+
+    <div class="signup-link">
+        Already have an account? <a href="index.html">Log in</a>
     </div>
+</div>
 
 <script>
+// Form validation
 const form = document.getElementById("loginForm");
 const nameInput = document.getElementById("name");
 const emailInput = document.getElementById("email");
@@ -355,8 +303,9 @@ const roleInput = document.getElementById("role");
 const nameError = document.getElementById("name-error");
 const emailError = document.getElementById("email-error");
 const emailExistError = document.getElementById("email-exist");
-const phoneError = document.getElementById("password-error");
+const phoneError = document.getElementById("phone-error");
 const genderError = document.getElementById("gender-error");
+const roleError = document.getElementById("role-error");
 
 const SIGNUP_API = "http://localhost:3000/api/signup";
 
@@ -364,7 +313,7 @@ form.addEventListener("submit", async (e) => {
     e.preventDefault();
     let isValid = true;
 
-    // 🔹 Name validation
+    // Name validation
     if (nameInput.value.trim() === "") {
         nameInput.classList.add("error");
         nameError.style.display = "block";
@@ -374,7 +323,7 @@ form.addEventListener("submit", async (e) => {
         nameError.style.display = "none";
     }
 
-    // 🔹 Email validation
+    // Email validation
     if (!emailInput.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
         emailInput.classList.add("error");
         emailError.style.display = "block";
@@ -384,7 +333,7 @@ form.addEventListener("submit", async (e) => {
         emailError.style.display = "none";
     }
 
-    // 🔹 Phone validation (11 digits)
+    // Phone validation
     if (phoneInput.value.length < 11) {
         phoneInput.classList.add("error");
         phoneError.style.display = "block";
@@ -394,31 +343,30 @@ form.addEventListener("submit", async (e) => {
         phoneError.style.display = "none";
     }
 
-    // 🔹 Gender validation
+    // Gender validation
     if (!genderInput.value) {
+        genderInput.classList.add("error");
         genderError.style.display = "block";
         isValid = false;
     } else {
+        genderInput.classList.remove("error");
         genderError.style.display = "none";
+    }
+
+    // Role validation
+    if (!roleInput.value) {
+        roleInput.classList.add("error");
+        roleError.style.display = "block";
+        isValid = false;
+    } else {
+        roleInput.classList.remove("error");
+        roleError.style.display = "none";
     }
 
     if (!isValid) return;
 
     try {
-        // 🔍 Check if email already exists
-        const resUsers = await fetch(SIGNUP_API);
-        const users = await resUsers.json();
-
-        const emailExists = users.some(u => u.email === emailInput.value);
-        if (emailExists) {
-            emailExistError.style.display = "block";
-            emailInput.classList.add("error");
-            return;
-        } else {
-            emailExistError.style.display = "none";
-        }
-
-        // ✅ Add new user
+        // Submit form
         const res = await fetch(SIGNUP_API, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -432,11 +380,15 @@ form.addEventListener("submit", async (e) => {
         });
 
         const data = await res.json();
-        alert(data.message || "User added successfully!");
-        form.reset();
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message || "User added successfully!");
+            form.reset();
+        }
 
-    } catch (error) {
-        console.error("Error:", error);
+    } catch (err) {
+        console.error(err);
         alert("Failed to create account");
     }
 });
