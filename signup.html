@@ -281,6 +281,14 @@ button:hover {
             <div class="error-message" id="role-error">Please select a role</div>
         </div>
 
+        <div class="input-group" id="vehicle-group" style="display:none;">
+            <label for="vehicleNumber">Vehicle Registration Number</label>
+            <input type="text" id="vehicleNumber" placeholder="e.g. ABC-1234" disabled>
+        <div class="error-message" id="vehicle-error">
+            Vehicle registration number is required for drivers
+        </div>
+</div>
+
         <button type="submit">Create Account</button>
     </form>
 
@@ -292,6 +300,11 @@ button:hover {
 </div>
 
 <script>
+
+const vehicleGroup = document.getElementById("vehicle-group");
+const vehicleInput = document.getElementById("vehicleNumber");
+const vehicleError = document.getElementById("vehicle-error");
+
 // Form validation
 const form = document.getElementById("loginForm");
 const nameInput = document.getElementById("name");
@@ -309,9 +322,35 @@ const roleError = document.getElementById("role-error");
 
 const SIGNUP_API = "http://localhost:3000/api/signup";
 
+// Role change listener
+roleInput.addEventListener("change", () => {
+    if (roleInput.value === "Driver") {
+        vehicleGroup.style.display = "block";
+        vehicleInput.disabled = false;
+    } else {
+        vehicleGroup.style.display = "none";
+        vehicleInput.disabled = true;
+        vehicleInput.value = "";
+        vehicleError.style.display = "none";
+        vehicleInput.classList.remove("error");
+    }
+});
+
 form.addEventListener("submit", async (e) => {
     e.preventDefault();
     let isValid = true;
+
+    // Vehicle number validation (only for drivers)
+    if (roleInput.value === "Driver") {
+        if (vehicleInput.value.trim() === "") {
+            vehicleInput.classList.add("error");
+            vehicleError.style.display = "block";
+            isValid = false;
+        } else {
+            vehicleInput.classList.remove("error");
+            vehicleError.style.display = "none";
+        }
+    }
 
     // Name validation
     if (nameInput.value.trim() === "") {
@@ -375,8 +414,10 @@ form.addEventListener("submit", async (e) => {
                 email: emailInput.value,
                 contact: phoneInput.value,
                 gender: genderInput.value,
-                role: roleInput.value
+                role: roleInput.value,
+                vehicleNumber: roleInput.value === "Driver" ? vehicleInput.value : null
             })
+
         });
 
         const data = await res.json();

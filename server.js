@@ -34,14 +34,22 @@ db.connect((err) => {
 
 /* ---------------- Sign Up API ---------------- */
 app.post("/api/signup", (req, res) => {
-  const { name, email, contact, gender, role } = req.body;
+  const { name, email, contact, gender, role, vehicleNumber } = req.body;
 
+  // 🔹 Basic validation
   if (!name || !email || !contact || !gender || !role) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
-  const checkSql =
-    "SELECT id FROM Users WHERE Email = ? OR Contact = ?";
+  // 🔹 Vehicle required only for drivers
+  if (role === "Driver" && !vehicleNumber) {
+    return res.status(400).json({ error: "Vehicle registration is required for drivers" });
+  }
+
+  // 🔍 Check if user already exists
+  const checkSql = `
+    SELECT id FROM Users WHERE Email = ? OR Contact = ?
+  `;
 
   db.query(checkSql, [email, contact], (err, results) => {
     if (err) {
@@ -53,22 +61,54 @@ app.post("/api/signup", (req, res) => {
       return res.status(409).json({ error: "User already exists" });
     }
 
-    const insertSql = `
+    // 🧾 Insert into Users table
+    const insertUserSql = `
       INSERT INTO Users (Name, Email, Contact, Gender, Role)
       VALUES (?, ?, ?, ?, ?)
     `;
 
-    db.query(insertSql, [name, email, contact, gender, role], (err, result) => {
-      if (err) {
-        console.error("❌ Insert error:", err);
-        return res.status(500).json({ error: "Failed to add user" });
-      }
+    db.query(
+      insertUserSql,
+      [name, email, contact, gender, role],
+      (err, result) => {
+        if (err) {
+          console.error("❌ Insert user error:", err);
+          return res.status(500).json({ error: "Failed to add user" });
+        }
 
-      res.status(201).json({
-        message: "User registered successfully",
-        userId: result.insertId
-      });
-    });
+        const userId = result.insertId; // ✅ Retrieved UserID
+
+        // 🚗 If role is Driver → insert into Drivers table
+        if (role === "Driver") {
+          const insertDriverSql = `
+            INSERT INTO Drivers (UserID, VehicleRegistration)
+            VALUES (?, ?)
+          `;
+
+          db.query(
+            insertDriverSql,
+            [userId, vehicleNumber],
+            (err) => {
+              if (err) {
+                console.error("❌ Insert driver error:", err);
+                return res.status(500).json({ error: "Failed to add driver details" });
+              }
+
+              return res.status(201).json({
+                message: "Driver registered successfully",
+                userId
+              });
+            }
+          );
+        } else {
+          // 🧍 Passenger response
+          return res.status(201).json({
+            message: "User registered successfully",
+            userId
+          });
+        }
+      }
+    );
   });
 });
 
