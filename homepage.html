@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartRide Home</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+/* ---------- ROOT ---------- */
+:root{
+  --primary:#1dbf73;
+  --bg:#f5f7f9;
+  --dark:#222;
+}
+
+/* ---------- RESET ---------- */
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI, sans-serif}
+
+/* ---------- NAVBAR ---------- */
+.navbar{
+  width:100%;
+  height:60px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  border-bottom:1px solid #ddd;
+}
+
+.nav-links{
+  display:flex;
+  gap:20px;
+}
+
+.nav-links a{
+  text-decoration:none;
+  color:#333;
+  font-weight:500;
+}
+
+.hamburger{
+  display:none;
+  font-size:22px;
+  cursor:pointer;
+}
+
+/* ---------- LAYOUT ---------- */
+.container{
+  display:flex;
+  height:calc(100vh - 60px);
+}
+
+/* LEFT PANEL */
+.left-panel{
+  width:30%;
+  background:#fff;
+  padding:15px;
+  display:flex;
+  flex-direction:column;
+  border-right:1px solid #ddd;
+}
+
+/* SWITCH */
+.switch{
+  display:flex;
+  gap:10px;
+  margin-bottom:15px;
+}
+
+.switch button{
+  flex:1;
+  padding:10px;
+  border:none;
+  cursor:pointer;
+  background:#eafaf1;
+  color:#0f8f56;
+  border-radius:6px;
+  font-weight:600;
+}
+
+.switch button.active{
+  background:var(--primary);
+  color:#fff;
+}
+
+/* INPUTS */
+.input-box{
+  margin-bottom:10px;
+}
+
+.input-box input{
+  width:100%;
+  padding:12px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+
+/* RESULTS */
+.results{
+  flex:1;
+  margin-top:10px;
+  overflow-y:auto;
+}
+
+.result-item{
+  padding:12px;
+  border-bottom:1px solid #eee;
+}
+
+/* MAP */
+#map{
+  width:70%;
+  height:100%;
+}
+
+/* ---------- MOBILE ---------- */
+@media(max-width:768px){
+
+  .container{
+    flex-direction:column;
+  }
+
+  .left-panel{
+    display:none;
+  }
+
+  #map{
+    width:100%;
+    height:100%;
+  }
+
+  .nav-links{
+    display:none;
+    position:absolute;
+    top:60px;
+    right:0;
+    background:#fff;
+    flex-direction:column;
+    width:200px;
+    border:1px solid #ddd;
+  }
+
+  .nav-links.show{
+    display:flex;
+  }
+
+  .hamburger{
+    display:block;
+  }
+
+  /* Bottom Panel */
+  .bottom-panel{
+    position:fixed;
+    bottom:0;
+    width:100%;
+    background:#eafaf1;
+    padding:12px;
+  }
+
+  .bottom-panel .switch{
+    margin-bottom:8px;
+  }
+
+  .bottom-panel input{
+    width:100%;
+    padding:12px;
+    border-radius:6px;
+    border:1px solid #ccc;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <h3>SmartRide</h3>
+
+  <div class="nav-links" id="navLinks">
+    <a href="#">Home</a>
+    <a href="#">Favourite</a>
+    <a href="#">Wallet</a>
+    <a href="#">Offers</a>
+    <a href="#">Profile</a>
+  </div>
+
+  <div class="hamburger" onclick="toggleMenu()">☰</div>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="switch">
+      <button class="active">Transport</button>
+      <button>Delivery</button>
+    </div>
+
+    <div class="input-box">
+      <input type="text" placeholder="Pickup location">
+    </div>
+
+    <div class="input-box">
+      <input type="text" placeholder="Drop-off location">
+    </div>
+
+    <div class="results">
+      <div class="result-item">Driver 1 • 2 km away</div>
+      <div class="result-item">Driver 2 • 3 km away</div>
+      <div class="result-item">Driver 3 • 5 km away</div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+</div>
+
+<!-- MOBILE BOTTOM PANEL -->
+<div class="bottom-panel">
+  <div class="switch">
+    <button class="active">Transport</button>
+    <button>Delivery</button>
+  </div>
+  <input type="text" placeholder="Where would you go?">
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+/* Hamburger */
+function toggleMenu(){
+  document.getElementById("navLinks").classList.toggle("show");
+}
+
+/* MAP */
+const map = L.map('map').setView([0,0], 13);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap'
+}).addTo(map);
+
+/* Current Location */
+navigator.geolocation.getCurrentPosition(pos=>{
+  const {latitude, longitude} = pos.coords;
+
+  map.setView([latitude, longitude], 15);
+
+  L.marker([latitude, longitude])
+    .addTo(map)
+    .bindPopup("You are here")
+    .openPopup();
+});
+</script>
+
+</body>
+</html>

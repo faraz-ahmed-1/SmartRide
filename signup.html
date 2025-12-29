@@ -167,6 +167,42 @@ button:hover {
 .signup-link a:hover {
     text-decoration: underline;
 }
+/* MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.5);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
+.modal-content{
+  background:#fff;
+  width:100%;
+  max-width:380px;
+  padding:30px;
+  border-radius:10px;
+  position:relative;
+}
+
+.modal h2{
+  text-align:center;
+  margin-bottom:20px;
+}
+
+.modal button{
+  margin-top:15px;
+  width:100%;
+  padding:12px;
+  background:#34a853;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  font-size:16px;
+}
 
 @media (max-width: 768px) {
     body {
@@ -298,13 +334,40 @@ button:hover {
     </div>
 </div>
 
-<script>
+<!-- PASSWORD MODAL -->
+<div id="passwordModal" class="modal">
+  <div class="modal-content">
+    <h2>Create Password</h2>
 
+    <div class="input-group">
+      <label>Password</label>
+      <input type="password" id="password">
+      <span class="password-toggle" onclick="togglePass('password')">Show</span>
+      <div class="error-message" id="password-error">
+        Password must be at least 8 characters
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Confirm Password</label>
+      <input type="password" id="confirm-password">
+      <span class="password-toggle" onclick="togglePass('confirm-password')">Show</span>
+      <div class="error-message" id="confirm-password-error">
+        Passwords must match
+      </div>
+    </div>
+
+    <button onclick="savePassword()">Save Password</button>
+  </div>
+</div>
+
+<script>
+/* ---------------- VEHICLE FIELD LOGIC ---------------- */
 const vehicleGroup = document.getElementById("vehicle-group");
 const vehicleInput = document.getElementById("vehicleNumber");
 const vehicleError = document.getElementById("vehicle-error");
 
-// Form validation
+/* ---------------- FORM ELEMENTS ---------------- */
 const form = document.getElementById("loginForm");
 const nameInput = document.getElementById("name");
 const emailInput = document.getElementById("email");
@@ -312,6 +375,7 @@ const phoneInput = document.getElementById("Phone");
 const genderInput = document.getElementById("gender");
 const roleInput = document.getElementById("role");
 
+/* ---------------- ERROR ELEMENTS ---------------- */
 const nameError = document.getElementById("name-error");
 const emailError = document.getElementById("email-error");
 const emailExistError = document.getElementById("email-exist");
@@ -319,119 +383,169 @@ const phoneError = document.getElementById("phone-error");
 const genderError = document.getElementById("gender-error");
 const roleError = document.getElementById("role-error");
 
+/* ---------------- PASSWORD MODAL ---------------- */
+const passwordModal = document.getElementById("passwordModal");
+const passwordInput = document.getElementById("password");
+const confirmPasswordInput = document.getElementById("confirm-password");
+
+let createdUserId = null;
+
+/* ---------------- API ENDPOINTS ---------------- */
 const SIGNUP_API = "http://localhost:3000/api/signup";
+const PASSWORD_API = "http://localhost:3000/api/password";
 
-// Role change listener
+/* ---------------- ROLE CHANGE ---------------- */
 roleInput.addEventListener("change", () => {
-    if (roleInput.value === "Driver") {
-        vehicleGroup.style.display = "block";
-        vehicleInput.disabled = false;
-    } else {
-        vehicleGroup.style.display = "none";
-        vehicleInput.disabled = true;
-        vehicleInput.value = "";
-        vehicleError.style.display = "none";
-        vehicleInput.classList.remove("error");
-    }
+  if (roleInput.value === "Driver") {
+    vehicleGroup.style.display = "block";
+    vehicleInput.disabled = false;
+  } else {
+    vehicleGroup.style.display = "none";
+    vehicleInput.disabled = true;
+    vehicleInput.value = "";
+    vehicleError.style.display = "none";
+    vehicleInput.classList.remove("error");
+  }
 });
 
+/* ---------------- SIGNUP SUBMIT ---------------- */
 form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    let isValid = true;
+  e.preventDefault();
+  let isValid = true;
 
-    // Vehicle number validation (only for drivers)
-    if (roleInput.value === "Driver") {
-        if (vehicleInput.value.trim() === "") {
-            vehicleInput.classList.add("error");
-            vehicleError.style.display = "block";
-            isValid = false;
-        } else {
-            vehicleInput.classList.remove("error");
-            vehicleError.style.display = "none";
-        }
+  // Vehicle validation
+  if (roleInput.value === "Driver" && vehicleInput.value.trim() === "") {
+    vehicleInput.classList.add("error");
+    vehicleError.style.display = "block";
+    isValid = false;
+  } else {
+    vehicleInput.classList.remove("error");
+    vehicleError.style.display = "none";
+  }
+
+  // Name
+  if (nameInput.value.trim() === "") {
+    nameInput.classList.add("error");
+    nameError.style.display = "block";
+    isValid = false;
+  } else {
+    nameInput.classList.remove("error");
+    nameError.style.display = "none";
+  }
+
+  // Email
+  if (!emailInput.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    emailInput.classList.add("error");
+    emailError.style.display = "block";
+    isValid = false;
+  } else {
+    emailInput.classList.remove("error");
+    emailError.style.display = "none";
+  }
+
+  // Phone
+  if (phoneInput.value.length < 11) {
+    phoneInput.classList.add("error");
+    phoneError.style.display = "block";
+    isValid = false;
+  } else {
+    phoneInput.classList.remove("error");
+    phoneError.style.display = "none";
+  }
+
+  // Gender
+  if (!genderInput.value) {
+    genderInput.classList.add("error");
+    genderError.style.display = "block";
+    isValid = false;
+  } else {
+    genderInput.classList.remove("error");
+    genderError.style.display = "none";
+  }
+
+  // Role
+  if (!roleInput.value) {
+    roleInput.classList.add("error");
+    roleError.style.display = "block";
+    isValid = false;
+  } else {
+    roleInput.classList.remove("error");
+    roleError.style.display = "none";
+  }
+
+  if (!isValid) return;
+
+  try {
+    const res = await fetch(SIGNUP_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: nameInput.value,
+        email: emailInput.value,
+        contact: phoneInput.value,
+        gender: genderInput.value,
+        role: roleInput.value,
+        vehicleNumber: roleInput.value === "Driver" ? vehicleInput.value : null
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      alert(data.error);
+      return;
     }
 
-    // Name validation
-    if (nameInput.value.trim() === "") {
-        nameInput.classList.add("error");
-        nameError.style.display = "block";
-        isValid = false;
-    } else {
-        nameInput.classList.remove("error");
-        nameError.style.display = "none";
-    }
+    // ✅ Save userId & open password popup
+    createdUserId = data.userId;
+    passwordModal.style.display = "flex";
 
-    // Email validation
-    if (!emailInput.value.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        emailInput.classList.add("error");
-        emailError.style.display = "block";
-        isValid = false;
-    } else {
-        emailInput.classList.remove("error");
-        emailError.style.display = "none";
-    }
-
-    // Phone validation
-    if (phoneInput.value.length < 11) {
-        phoneInput.classList.add("error");
-        phoneError.style.display = "block";
-        isValid = false;
-    } else {
-        phoneInput.classList.remove("error");
-        phoneError.style.display = "none";
-    }
-
-    // Gender validation
-    if (!genderInput.value) {
-        genderInput.classList.add("error");
-        genderError.style.display = "block";
-        isValid = false;
-    } else {
-        genderInput.classList.remove("error");
-        genderError.style.display = "none";
-    }
-
-    // Role validation
-    if (!roleInput.value) {
-        roleInput.classList.add("error");
-        roleError.style.display = "block";
-        isValid = false;
-    } else {
-        roleInput.classList.remove("error");
-        roleError.style.display = "none";
-    }
-
-    if (!isValid) return;
-
-    try {
-        // Submit form
-        const res = await fetch(SIGNUP_API, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                name: nameInput.value,
-                email: emailInput.value,
-                contact: phoneInput.value,
-                gender: genderInput.value,
-                role: roleInput.value,
-                vehicleNumber: roleInput.value === "Driver" ? vehicleInput.value : null
-            })
-
-        });
-
-        const data = await res.json();
-        if (data.error) {
-            alert(data.error);
-        } else {
-            alert(data.message || "User added successfully!");
-            form.reset();
-        }
-
-    } catch (err) {
-        console.error(err);
-        alert("Failed to create account");
-    }
+  } catch (err) {
+    console.error(err);
+    alert("Signup failed");
+  }
 });
+
+/* ---------------- PASSWORD FUNCTIONS ---------------- */
+function togglePass(id) {
+  const input = document.getElementById(id);
+  input.type = input.type === "password" ? "text" : "password";
+}
+
+async function savePassword() {
+  const pass = passwordInput.value;
+  const confirm = confirmPasswordInput.value;
+
+  if (pass.length < 8) {
+    document.getElementById("password-error").style.display = "block";
+    return;
+  }
+
+  if (pass !== confirm) {
+    document.getElementById("confirm-password-error").style.display = "block";
+    return;
+  }
+
+  const res = await fetch(PASSWORD_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId: createdUserId,
+      password: pass
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    alert("Account created successfully!");
+    passwordModal.style.display = "none";
+    form.reset();
+  } else {
+    alert("Failed to save password");
+  }
+}
 </script>
+
 </body>
 </html>
