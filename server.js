@@ -112,6 +112,122 @@ app.post("/api/signup", (req, res) => {
   });
 });
 
+/* ---------------- PASSWORD API ---------------- */
+app.post("/api/password", (req, res) => {
+  const { userId, password } = req.body;
+
+  // Basic validation
+  if (!userId || !password) {
+    return res.status(400).json({ success: false, message: "Missing fields" });
+  }
+
+  // Optional length check (matches frontend)
+  if (password.length < 8 || password.length > 18) {
+    return res.status(400).json({
+      success: false,
+      message: "Password must be 8–18 characters"
+    });
+  }
+
+  // Check if password already exists (because UNIQUE)
+  const checkSql = `
+    SELECT ID FROM Passwords WHERE Password = ?
+  `;
+
+  db.query(checkSql, [password], (err, result) => {
+    if (err) {
+      console.error("❌ Password check error:", err);
+      return res.status(500).json({ success: false });
+    }
+
+    if (result.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Password already in use"
+      });
+    }
+
+    // Insert password
+    const insertSql = `
+      INSERT INTO Passwords (UserID, Password)
+      VALUES (?, ?)
+    `;
+
+    db.query(insertSql, [userId, password], (err) => {
+      if (err) {
+        console.error("❌ Password insert error:", err);
+        return res.status(500).json({ success: false });
+      }
+
+      res.status(201).json({
+        success: true,
+        message: "Password saved successfully"
+      });
+    });
+  });
+});
+
+/* ---------------- LOGIN API ---------------- */
+app.post("/api/login", (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      message: "Email and password are required"
+    });
+  }
+
+  const sql = `
+    SELECT 
+      Users.ID,
+      Users.Name,
+      Users.Email,
+      Users.Role,
+      Passwords.Password
+    FROM Users
+    JOIN Passwords ON Users.ID = Passwords.UserID
+    WHERE Users.Email = ?
+  `;
+
+  db.query(sql, [email], (err, results) => {
+    if (err) {
+      console.error("❌ Login SQL Error:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
+    }
+
+    if (results.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: "Email not found"
+      });
+    }
+
+    const user = results[0];
+
+    // Plain text password check
+    if (user.Password !== password) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password"
+      });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.ID,
+        name: user.Name,
+        email: user.Email,
+        role: user.Role
+      }
+    });
+  });
+});
+
 /* ---------------- Start Local Server ---------------- */
 const PORT = process.env.PORT || 3000;
 

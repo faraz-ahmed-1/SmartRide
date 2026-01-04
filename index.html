@@ -330,62 +330,76 @@
     </div>
 
 <script>
-const loginForm = document.getElementById('loginForm');
-const togglePassword = document.getElementById('togglePassword');
-const passwordInput = document.getElementById('password');
-const emailInput = document.getElementById('email');
-const emailError = document.getElementById('email-error');
-const passwordError = document.getElementById('password-error');
+const loginForm = document.getElementById("loginForm");
+const togglePassword = document.getElementById("togglePassword");
+const passwordInput = document.getElementById("password");
+const emailInput = document.getElementById("email");
+
+const emailError = document.getElementById("email-error");
+const passwordError = document.getElementById("password-error");
+
+const LOGIN_API = "http://localhost:3000/api/login";
 
 /* ---------------- PASSWORD TOGGLE ---------------- */
-togglePassword.addEventListener('click', () => {
-  const type = passwordInput.type === 'password' ? 'text' : 'password';
-  passwordInput.type = type;
-  togglePassword.textContent = type === 'password' ? 'Show' : 'Hide';
+togglePassword.addEventListener("click", () => {
+  passwordInput.type =
+    passwordInput.type === "password" ? "text" : "password";
+  togglePassword.textContent =
+    passwordInput.type === "password" ? "Show" : "Hide";
 });
 
 /* ---------------- LOGIN SUBMIT ---------------- */
-loginForm.addEventListener('submit', (e) => {
+loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const email = emailInput.value.trim();
   const password = passwordInput.value;
 
-  // Get users from localStorage
-  const users = JSON.parse(localStorage.getItem("users")) || [];
+  // Reset errors
+  emailInput.classList.remove("error");
+  passwordInput.classList.remove("error");
+  emailError.style.display = "none";
+  passwordError.style.display = "none";
 
-  // Find user by email
-  const user = users.find(u => u.email === email);
-
-  /* -------- EMAIL NOT FOUND -------- */
-  if (!user) {
-    emailInput.classList.add('error');
-    emailError.style.display = 'block';
-    passwordInput.classList.remove('error');
-    passwordError.style.display = 'none';
+  if (!email || !password) {
     return;
   }
 
-  /* -------- INVALID PASSWORD -------- */
-  if (user.password !== password) {
-    passwordInput.classList.add('error');
-    passwordError.style.display = 'block';
-    emailInput.classList.remove('error');
-    emailError.style.display = 'none';
-    return;
+  try {
+    const res = await fetch(LOGIN_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    /* -------- LOGIN FAILED -------- */
+    if (!res.ok || !data.success) {
+      if (data.message?.toLowerCase().includes("email")) {
+        emailInput.classList.add("error");
+        emailError.style.display = "block";
+      } else {
+        passwordInput.classList.add("error");
+        passwordError.style.display = "block";
+      }
+      return;
+    }
+
+    /* -------- LOGIN SUCCESS -------- */
+    localStorage.setItem("currentUser", JSON.stringify(data.user));
+
+    // Redirect based on role (optional but recommended)
+    if (data.user.role === "Driver") {
+      window.location.href = "homepage.html";
+    } else {
+      window.location.href = "homepage.html";
+    }
+
+  } catch (err) {
+    console.error("Login error:", err);
+    alert("Server error. Please try again later.");
   }
-
-  /* -------- SUCCESS -------- */
-  emailInput.classList.remove('error');
-  passwordInput.classList.remove('error');
-  emailError.style.display = 'none';
-  passwordError.style.display = 'none';
-
-  // Save logged-in user
-  localStorage.setItem("currentUser", JSON.stringify(user));
-
-  // Redirect to home
-  window.location.href = `homepage.html?username=${user.username}`;
 });
 </script>
 
