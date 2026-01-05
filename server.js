@@ -7,6 +7,13 @@ const cors = require("cors");
 const path = require("path");
 
 const app = express();
+import { transporter } from "./mailer.js";
+await transporter.sendMail({
+  from: process.env.EMAIL_USER,
+  to: email,
+  subject: "OTP Verification",
+  text: `Your OTP is ${otp}`
+});
 
 /* ---------------- Middleware ---------------- */
 app.use(cors());
@@ -226,6 +233,69 @@ app.post("/api/login", (req, res) => {
       }
     });
   });
+});
+
+let otpStore = {};
+
+app.post("/api/reset-email", (req, res) => {
+  const { email } = req.body;
+
+  db.query("SELECT ID FROM Users WHERE Email=?", [email], async (err, result) => {
+    if (err || result.length === 0) {
+      return res.json({ success: false });
+    }
+
+    const userId = result[0].ID;
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    otpStore[userId] = otp;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "SmartRide - Password Reset OTP",
+      html: `
+        <h2>Password Reset</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP is valid for 5 minutes.</p>
+      `
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+      res.json({ success: true, userId });
+    } catch (mailError) {
+      console.error("Email error:", mailError);
+      res.json({ success: false });
+    }
+  });
+});
+
+app.post("/api/verify-otp", (req, res) => {
+  const { userId, otp } = req.body;
+
+  if (otpStore[userId] == otp) {
+    delete otpStore[userId];
+    return res.json({ success: true });
+  }
+
+  res.json({ success: false });
+});
+
+app.post("/api/reset-password", (req, res) => {
+  const { userId, password } = req.body;
+
+  db.query(
+    "UPDATE Passwords SET Password=? WHERE UserID=?",
+    [password, userId],
+    (err) => {
+      if (err) {
+        return res.json({ success: false });
+      }
+      res.json({ success: true });
+    }
+  );
 });
 
 /* ---------------- Start Local Server ---------------- */

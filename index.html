@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Login</title>
+    <title>SmartRide</title>
     <link rel="shortcut icon" href="SmartRide.png" type="image/x-icon">
 
     <style>
@@ -266,6 +266,39 @@
         font-size: 13px;
     }
 }
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 25px;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 350px;
+  text-align: center;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+}
+
+.modal-content button {
+  width: 100%;
+  padding: 12px;
+  background: #34a853;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+}
 
 @media (max-width: 480px) {
     .login-container {
@@ -328,6 +361,34 @@
             Don't have an account? <a href="signup.html">Sign up</a>
         </div>
     </div>
+
+    <!-- EMAIL MODAL -->
+<div id="emailModal" class="modal">
+  <div class="modal-content">
+    <h2>Reset Password</h2>
+    <input type="email" id="resetEmail" placeholder="Enter your email">
+    <button onclick="verifyEmail()">Send OTP</button>
+  </div>
+</div>
+
+<!-- OTP MODAL -->
+<div id="otpModal" class="modal">
+  <div class="modal-content">
+    <h2>Verify OTP</h2>
+    <input type="text" id="otpInput" placeholder="Enter OTP">
+    <button onclick="verifyOTP()">Verify</button>
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div id="newPasswordModal" class="modal">
+  <div class="modal-content">
+    <h2>New Password</h2>
+    <input type="password" id="newPassword" placeholder="New password">
+    <input type="password" id="confirmNewPassword" placeholder="Confirm password">
+    <button onclick="resetPassword()">Update Password</button>
+  </div>
+</div>
 
 <script>
 const loginForm = document.getElementById("loginForm");
