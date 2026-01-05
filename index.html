@@ -348,7 +348,7 @@
                     <label for="remember">Remember me</label>
                 </div>
                 <div class="forgot-password">
-                    <a href="#">Forgot password?</a>
+                    <a href="#" id="ForgotPassword">Forgot password?</a>
                 </div>
             </div>
             
@@ -460,6 +460,101 @@ loginForm.addEventListener("submit", async (e) => {
   } catch (err) {
     console.error("Login error:", err);
     alert("Server error. Please try again later.");
+  }
+});
+
+const forgotLink = document.getElementById("ForgotPassword");
+
+const emailModal = document.getElementById("emailModal");
+const otpModal = document.getElementById("otpModal");
+const newPasswordModal = document.getElementById("newPasswordModal");
+
+forgotLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  openModal(emailModal);
+});
+
+/* ---------------- MODAL FUNCTIONS ---------------- */
+function openModal(modal) {
+  closeAllModals();
+  modal.style.display = "flex";
+}
+
+function closeAllModals() {
+  emailModal.style.display = "none";
+  otpModal.style.display = "none";
+  newPasswordModal.style.display = "none";
+}
+let UserEmail = null;
+/* ---------------- RESET FLOW (FRONTEND DEMO) ---------------- */
+async function verifyEmail() {
+  const email = document.getElementById("resetEmail").value.trim();
+  UserEmail = email;
+  if (!email) {
+    alert("Enter email");
+    return;
+  }
+
+  const res = await fetch("http://localhost:3000/api/reset-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+
+  const data = await res.json();
+  console.log("ID: ", data.userId);
+  if (!data.success) {
+    alert("Email not found");
+    return;
+  }
+
+  localStorage.setItem("resetUserId", data.userId);
+  openModal(otpModal);
+}
+
+async function verifyOTP() {
+  const otp = document.getElementById("otpInput").value.trim();
+  if (!otp) {
+    alert("Please enter OTP");
+    return;
+  }
+  const res = await fetch("http://localhost:3000/api/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ UserEmail, otp })
+  });
+
+  const data = await res.json();
+  if (!data.success) {
+    alert("OTP invalid");
+    return;
+  }
+  alert("OTP verified");
+  openModal(newPasswordModal);
+}
+
+function resetPassword() {
+  const newPass = document.getElementById("newPassword").value;
+  const confirmPass = document.getElementById("confirmNewPassword").value;
+
+  if (!newPass || !confirmPass) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  alert("Password updated successfully!");
+  closeAllModals();
+}
+
+/* ---------------- CLOSE MODAL ON OUTSIDE CLICK ---------------- */
+window.addEventListener("click", (e) => {
+  if (e.target.classList.contains("modal")) {
+    closeAllModals();
   }
 });
 </script>

@@ -1,19 +1,22 @@
-// server.js (LOCAL + ENV)
+import path from "path";
+import { fileURLToPath } from "url";
 
-require("dotenv").config();
-const express = require("express");
-const mysql = require("mysql2");
-const cors = require("cors");
-const path = require("path");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+import dotenv from "dotenv";
+dotenv.config();
+
+console.log("EMAIL_USER =", process.env.EMAIL_USER);
+console.log("EMAIL_PASS =", process.env.EMAIL_PASS ? "LOADED" : "MISSING");
+
+import express from "express";
+import mysql from "mysql2";
+import cors from "cors";
+
 
 const app = express();
 import { transporter } from "./mailer.js";
-await transporter.sendMail({
-  from: process.env.EMAIL_USER,
-  to: email,
-  subject: "OTP Verification",
-  text: `Your OTP is ${otp}`
-});
 
 /* ---------------- Middleware ---------------- */
 app.use(cors());
@@ -235,23 +238,29 @@ app.post("/api/login", (req, res) => {
   });
 });
 
-let otpStore = {};
-
-app.post("/api/reset-email", (req, res) => {
+app.post("/api/reset-email", async (req, res) => {
   const { email } = req.body;
+console.log("Email: ", email);
+  try {
+    const [rows] = await db.promise().query(
+      "SELECT ID FROM Users WHERE Email = ?",
+      [email]
+    );
 
-  db.query("SELECT ID FROM Users WHERE Email=?", [email], async (err, result) => {
-    if (err || result.length === 0) {
-      return res.json({ success: false });
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Email not found" });
     }
 
-    const userId = result[0].ID;
+    const userId = rows[0].ID;
     const otp = Math.floor(100000 + Math.random() * 900000);
 
-    otpStore[userId] = otp;
+    const [row] = await db.promise().query(
+      "INSERT INTO OTPs(UserID, OTP) VALUES (?, ?)",
+      [userId, otp]
+    );
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"SmartRide" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "SmartRide - Password Reset OTP",
       html: `
@@ -262,21 +271,42 @@ app.post("/api/reset-email", (req, res) => {
       `
     };
 
-    try {
-      await transporter.sendMail(mailOptions);
-      res.json({ success: true, userId });
-    } catch (mailError) {
-      console.error("Email error:", mailError);
-      res.json({ success: false });
-    }
-  });
+    await transporter.sendMail(mailOptions);
+
+    console.log("✅ OTP sent to:", email, "OTP:", otp);
+
+    res.json({ success: true, userId });
+
+  } catch (error) {
+    console.error("❌ Reset email error:", error);
+    res.status(500).json({ success: false });
+  }
 });
 
-app.post("/api/verify-otp", (req, res) => {
-  const { userId, otp } = req.body;
+app.post("/api/verify-otp", async (req, res) => {
+  const { UserEmail, otp } = req.body;
+  console.log("req.body: ", req.body);
+    const [rows] = await db.promise().query(
+      "SELECT ID FROM Users WHERE Email = ?",
+      [UserEmail]
+    );
 
-  if (otpStore[userId] == otp) {
-    delete otpStore[userId];
+    const userId = rows[0].ID;
+    console.log(userId);
+    const [result] = await db.promise().query(
+      "SELECT OTP FROM OTPs WHERE UserID = ?",
+      [userId]
+    );
+    const OTP = result[0].OTP;
+    console.log(result[0].OTP);
+    console.log(OTP);
+    console.log(otp);
+  if (OTP == otp) {
+    console.log("OTP Verified");
+    const [row] = await db.promise().query(
+      "DELETE FROM OTPs WHERE UserID = ?",
+      [userId]
+    );
     return res.json({ success: true });
   }
 

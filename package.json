@@ -1,6 +1,7 @@
 {
   "name": "smartride",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "server.js",
   "dependencies": {
