@@ -172,6 +172,36 @@
     border:1px solid #ccc;
   }
 }
+
+.use-location{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:6px;
+  background:#1dbf73;
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+}
+.suggestions{
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:6px;
+  max-height:180px;
+  overflow-y:auto;
+  margin-top:4px;
+}
+
+.suggestion-item{
+  padding:10px;
+  cursor:pointer;
+  font-size:14px;
+}
+
+.suggestion-item:hover{
+  background:#eafaf1;
+}
+
 </style>
 </head>
 
@@ -202,13 +232,27 @@
       <button>Delivery</button>
     </div>
 
-    <div class="input-box">
-      <input type="text" placeholder="Pickup location">
-    </div>
+<div class="input-box">
+  <input type="text" id="pickupInput" placeholder="Pickup location" autocomplete="off">
+  <div id="pickupSuggestions" class="suggestions"></div>
+</div>
 
-    <div class="input-box">
-      <input type="text" placeholder="Drop-off location">
-    </div>
+<div class="input-box">
+  <input type="text" id="dropoffInput" placeholder="Drop-off location" autocomplete="off">
+  <div id="dropoffSuggestions" class="suggestions"></div>
+</div>
+
+<div class="input-box">
+  <button class="use-location" onclick="useCurrentLocation()">
+    📍 Use Current Location
+  </button>
+</div>
+
+<div class="input-box">
+  <button class="use-location" onclick="confirmRide()">
+    Confirm
+  </button>
+</div>
 
     <div class="results">
       <div class="result-item">Driver 1 • 2 km away</div>
@@ -233,31 +277,154 @@
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- 
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script> -->
 
 <script>
 /* Hamburger */
 function toggleMenu(){
   document.getElementById("navLinks").classList.toggle("show");
 }
-
-/* MAP */
-const map = L.map('map').setView([0,0], 13);
+/* ---------------- MAP ---------------- */
+const map = L.map('map').setView([30.3753, 69.3451], 5);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
   attribution:'© OpenStreetMap'
 }).addTo(map);
 
-/* Current Location */
-navigator.geolocation.getCurrentPosition(pos=>{
-  const {latitude, longitude} = pos.coords;
+let pickupMarker, dropoffMarker, routeLine;
+let pickupCoords = null;
+let dropoffCoords = null;
 
-  map.setView([latitude, longitude], 15);
+/* ---------------- SEARCH ---------------- */
+async function searchLocations(query){
+  if(query.length < 3) return [];
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&q=${encodeURIComponent(query)}`;
+  const res = await fetch(url);
+  return await res.json();
+}
 
-  L.marker([latitude, longitude])
-    .addTo(map)
-    .bindPopup("You are here")
-    .openPopup();
+/* ---------------- SUGGESTIONS ---------------- */
+function showSuggestions(results, container, onSelect){
+  container.innerHTML = "";
+  results.forEach(place=>{
+    const div = document.createElement("div");
+    div.className = "suggestion-item";
+    div.textContent = place.display_name;
+    div.onclick = ()=> onSelect(place);
+    container.appendChild(div);
+  });
+}
+
+/* ---------------- PICKUP ---------------- */
+pickupInput.addEventListener("input", async ()=>{
+  const results = await searchLocations(pickupInput.value);
+  showSuggestions(results, pickupSuggestions, place=>{
+    pickupCoords = place;
+    pickupInput.value = place.display_name;
+    pickupSuggestions.innerHTML = "";
+
+    if(pickupMarker) map.removeLayer(pickupMarker);
+    pickupMarker = L.marker([place.lat, place.lon])
+      .addTo(map)
+      .bindPopup("Pickup Location")
+      .openPopup();
+
+    tryRoute();
+  });
 });
+
+/* ---------------- DROPOFF ---------------- */
+dropoffInput.addEventListener("input", async ()=>{
+  const results = await searchLocations(dropoffInput.value);
+  showSuggestions(results, dropoffSuggestions, place=>{
+    dropoffCoords = place;
+    dropoffInput.value = place.display_name;
+    dropoffSuggestions.innerHTML = "";
+
+    if(dropoffMarker) map.removeLayer(dropoffMarker);
+    dropoffMarker = L.marker([place.lat, place.lon])
+      .addTo(map)
+      .bindPopup("Drop-off Location")
+      .openPopup();
+
+    tryRoute();
+  });
+});
+
+/* ---------------- CURRENT LOCATION ---------------- */
+function useCurrentLocation(){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    pickupCoords = {
+      lat: pos.coords.latitude,
+      lon: pos.coords.longitude,
+      display_name: "Current Location"
+    };
+
+    pickupInput.value = "Current Location";
+    pickupSuggestions.innerHTML = "";
+
+    if(pickupMarker) map.removeLayer(pickupMarker);
+    pickupMarker = L.marker([pickupCoords.lat, pickupCoords.lon])
+      .addTo(map)
+      .bindPopup("Pickup: Current Location")
+      .openPopup();
+
+    map.setView([pickupCoords.lat, pickupCoords.lon], 15);
+    tryRoute();
+  });
+}
+
+/* ---------------- ROUTING (OSRM) ---------------- */
+async function tryRoute(){
+  if(!pickupCoords || !dropoffCoords) return;
+
+  const url = `https://router.project-osrm.org/route/v1/driving/` +
+    `${pickupCoords.lon},${pickupCoords.lat};` +
+    `${dropoffCoords.lon},${dropoffCoords.lat}` +
+    `?overview=full&geometries=geojson`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if(!data.routes || !data.routes.length) return;
+
+  const route = data.routes[0];
+  const coords = route.geometry.coordinates.map(c=>[c[1], c[0]]);
+
+  if(routeLine) map.removeLayer(routeLine);
+
+  routeLine = L.polyline(coords, {
+    weight:5,
+    opacity:0.8
+  }).addTo(map);
+
+  map.fitBounds(routeLine.getBounds(), { padding:[50,50] });
+
+  showRouteInfo(route.distance, route.duration);
+}
+
+/* ---------------- ROUTE INFO ---------------- */
+function showRouteInfo(distance, duration){
+  const km = (distance / 1000).toFixed(1);
+  const min = Math.round(duration / 60);
+
+  const info = document.getElementById("routeInfo");
+  info.style.display = "block";
+  info.innerHTML = `🚗 ${km} km • ⏱️ ${min} mins`;
+}
+
+/* ---------------- CONFIRM ---------------- */
+function confirmRide(){
+  if(!pickupCoords || !dropoffCoords){
+    alert("Please select pickup and drop-off");
+    return;
+  }
+  alert("Route confirmed. Proceeding...");
+
+  // 👉 NEXT STEP IDEA:
+  // window.location.href = "ride-options.html";
+}
 </script>
 
 </body>

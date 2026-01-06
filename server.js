@@ -313,12 +313,19 @@ app.post("/api/verify-otp", async (req, res) => {
   res.json({ success: false });
 });
 
-app.post("/api/reset-password", (req, res) => {
-  const { userId, password } = req.body;
+app.post("/api/reset-password", async (req, res) => {
+  const { UserEmail, newPass } = req.body;
+console.log("req.body: ", req.body);
+
+    const [result] = await db.promise().query(
+      "SELECT ID FROM Users WHERE Email = ?",
+      [UserEmail]
+    );
+    const userID = result[0].ID;
 
   db.query(
     "UPDATE Passwords SET Password=? WHERE UserID=?",
-    [password, userId],
+    [newPass, userID],
     (err) => {
       if (err) {
         return res.json({ success: false });

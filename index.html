@@ -318,10 +318,23 @@
         font-size: 12px;
     }
 }
+.route-info{
+  position:absolute;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#fff;
+  padding:10px 16px;
+  border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  font-weight:600;
+  z-index:1000;
+}
 
     </style>
 </head>
 <body>
+  <div id="routeInfo" class="route-info" style="display:none;"></div>
     <div class="login-container">
         <div class="logo">
             <h1>Welcome Back</h1>
@@ -533,7 +546,7 @@ async function verifyOTP() {
   openModal(newPasswordModal);
 }
 
-function resetPassword() {
+async function resetPassword() {
   const newPass = document.getElementById("newPassword").value;
   const confirmPass = document.getElementById("confirmNewPassword").value;
 
@@ -544,6 +557,18 @@ function resetPassword() {
 
   if (newPass !== confirmPass) {
     alert("Passwords do not match");
+    return;
+  }
+
+    const res = await fetch("http://localhost:3000/api/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ UserEmail, newPass })
+  });
+
+  const data = await res.json();
+  if (!data.success) {
+    alert("OTP invalid");
     return;
   }
 
