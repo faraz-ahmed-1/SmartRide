@@ -194,6 +194,8 @@ app.post("/api/login", (req, res) => {
       Users.Name,
       Users.Email,
       Users.Role,
+      Users.Contact,
+      Users.Gender,
       Passwords.Password
     FROM Users
     JOIN Passwords ON Users.ID = Passwords.UserID
@@ -218,7 +220,7 @@ app.post("/api/login", (req, res) => {
 
     const user = results[0];
 
-    // Plain text password check
+    // ⚠️ Plain text check (hashing recommended later)
     if (user.Password !== password) {
       return res.status(401).json({
         success: false,
@@ -226,13 +228,60 @@ app.post("/api/login", (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      user: {
-        id: user.ID,
-        name: user.Name,
-        email: user.Email,
-        role: user.Role
+    // ✅ Check if profile exists
+    const verifyProfileSql = `SELECT ID FROM Profile WHERE UserID = ?`;
+
+    db.query(verifyProfileSql, [user.ID], (err, profileResult) => {
+      if (err) {
+        console.error("❌ Profile check error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Server error"
+        });
+      }
+
+      // ✅ Create profile if missing
+      if (profileResult.length === 0) {
+        const insertProfileSql = `
+          INSERT INTO Profile (UserID, Name, Contact, Email, Address, City)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `;
+
+        db.query(
+          insertProfileSql,
+          [user.ID, user.Name, user.Contact, user.Email, null, null],
+          (err) => {
+            if (err) {
+              console.error("❌ Profile insert error:", err);
+              return res.status(500).json({
+                success: false,
+                message: "Failed to create profile"
+              });
+            }
+
+            // ✅ Send response AFTER profile creation
+            return res.json({
+              success: true,
+              user: {
+                id: user.ID,
+                name: user.Name,
+                email: user.Email,
+                role: user.Role
+              }
+            });
+          }
+        );
+      } else {
+        // ✅ Profile already exists
+        return res.json({
+          success: true,
+          user: {
+            id: user.ID,
+            name: user.Name,
+            email: user.Email,
+            role: user.Role
+          }
+        });
       }
     });
   });
@@ -333,6 +382,186 @@ console.log("req.body: ", req.body);
       res.json({ success: true });
     }
   );
+});
+
+// GET WALLET DETAILS
+app.get("/api/wallet", (req, res) => {
+  const userId = req.query.userId;
+  console.log("userId: ", userId);
+
+  // Check if wallet exists
+  db.query(
+    "SELECT * FROM Wallet WHERE UserID = ?",
+    [userId],
+    (err, walletResult) => {
+      if (err) return res.status(500).json(err);
+      // If wallet doesn't exist, create one
+      if (walletResult.length == 0) {
+        db.query(
+          "INSERT INTO Wallet (UserID, Balance) VALUES (?, 0)",
+          [userId],
+          () => {
+            return res.json({ balance: 0, transactions: [] });
+          }
+        );
+      } else {
+        const wallet = walletResult[0];
+
+        // Get transactions
+        db.query(
+          "SELECT * FROM WalletTransactions WHERE WalletID = ? ORDER BY CreatedAt DESC",
+          [wallet.WalletID],
+          (err, txResult) => {
+            if (err) return res.status(500).json(err);
+
+            res.json({
+              balance: wallet.Balance,
+              transactions: txResult
+            });
+          }
+        );
+      }
+    }
+  );
+});
+
+// ADD MONEY TO WALLET
+app.post("/api/wallet/add", (req, res) => {
+  const { userId, amount } = req.body;
+console.log("req.body: ", req.body);
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ message: "Invalid amount" });
+  }
+
+  // Get wallet
+  db.query(
+    "SELECT * FROM Wallet WHERE UserID = ?",
+    [userId],
+    (err, walletResult) => {
+      if (err) return res.status(500).json(err);
+      if (walletResult.length === 0) {
+        return res.status(404).json({ message: "Wallet not found" });
+      }
+
+      const wallet = walletResult[0];
+      const newBalance = Number(wallet.Balance) + Number(amount);
+
+      // Update balance
+      db.query(
+        "UPDATE Wallet SET Balance = ? WHERE WalletID = ?",
+        [newBalance, wallet.WalletID],
+        (err) => {
+          if (err) return res.status(500).json(err);
+
+          // Insert transaction
+          db.query(
+            "INSERT INTO WalletTransactions (WalletID, Amount, Type) VALUES (?, ?, 'CREDIT')",
+            [wallet.WalletID, amount],
+            () => {
+              res.json({ message: "Wallet updated successfully" });
+            }
+          );
+        }
+      );
+    }
+  );
+});
+
+app.get("/api/profile", (req, res) => {
+  const { userId } = req.query;
+
+  if (!userId) {
+    return res.status(400).json({ message: "UserID is required" });
+  }
+
+  db.query(
+    `SELECT 
+      p.ID AS ID,
+      u.ID AS UserID,
+      p.Name AS Name,
+      u.Contact As Contact,
+      u.Gender AS Gender,
+      u.Email AS Email,
+      u.Role AS Role,
+      p.Address AS Address,
+      p.City AS City
+     FROM Profile p
+     JOIN Users u ON u.ID = p.UserID
+     WHERE u.ID = ?`,
+    [userId],
+    (err, result) => {
+      if (err) {
+        console.error("PROFILE FETCH ERROR:", err);
+        return res.status(500).json({ error: err.message });
+      }
+
+      if (result.length === 0) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+
+      res.json(result[0]);
+    }
+  );
+});
+
+app.post("/api/profile/update", (req, res) => {
+  const { userId, name, address, city } = req.body;
+
+  if (!userId || !name) {
+    return res.status(400).json({
+      message: "UserID and Name are required"
+    });
+  }
+
+  // 1️⃣ Update Profile table
+  const updateProfileSql = `
+    UPDATE Profile
+    SET Name = ?, Address = ?, City = ?
+    WHERE UserID = ?
+  `;
+
+  db.query(updateProfileSql, [name, address || null, city || null, userId], (err, result) => {
+    if (err) {
+      console.error("❌ PROFILE UPDATE ERROR:", err);
+
+      if (err.code === "ER_DUP_ENTRY") {
+        return res.status(409).json({
+          message: "Email or Contact already exists"
+        });
+      }
+
+      return res.status(500).json({
+        message: "Failed to update profile"
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Profile not found"
+      });
+    }
+
+    // 2️⃣ Update Users table
+    const updateUsersSql = `
+      UPDATE Users
+      SET Name = ?
+      WHERE ID = ?
+    `;
+
+    db.query(updateUsersSql, [name, userId], (err2) => {
+      if (err2) {
+        console.error("❌ USERS UPDATE ERROR:", err2);
+        return res.status(500).json({
+          message: "Failed to update user name"
+        });
+      }
+
+      // ✅ Respond after both updates succeed
+      return res.json({
+        message: "Profile updated successfully"
+      });
+    });
+  });
 });
 
 /* ---------------- Start Local Server ---------------- */

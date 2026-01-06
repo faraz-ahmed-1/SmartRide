@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartRide Wallet</title>
+<link rel="shortcut icon" href="SmartRide.png">
+
+<style>
+:root{
+  --primary:#1dbf73;
+  --bg:#f5f7f9;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Segoe UI, sans-serif;
+}
+
+/* NAVBAR */
+.navbar{
+  height:60px;
+  background:#fff;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 20px;
+  border-bottom:1px solid #ddd;
+}
+
+.nav-links{
+  display:flex;
+  gap:20px;
+}
+
+.nav-links a{
+  text-decoration:none;
+  color:#333;
+  font-weight:500;
+}
+
+/* LAYOUT */
+.container{
+  display:flex;
+  padding:20px;
+  background:var(--bg);
+  height:calc(100vh - 60px);
+  gap:20px;
+}
+
+/* LEFT */
+.left-panel{
+  width:40%;
+  background:#fff;
+  padding:20px;
+  border-radius:8px;
+}
+
+.left-panel h3{
+  margin-bottom:15px;
+}
+
+.input-box{
+  margin-bottom:12px;
+}
+
+.input-box input{
+  width:100%;
+  padding:12px;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+
+.add-btn{
+  width:100%;
+  padding:12px;
+  background:var(--primary);
+  border:none;
+  color:#fff;
+  border-radius:6px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+/* RIGHT */
+.right-panel{
+  width:60%;
+  background:#fff;
+  padding:20px;
+  border-radius:8px;
+  display:flex;
+  flex-direction:column;
+}
+
+.balance{
+  font-size:26px;
+  font-weight:700;
+  margin-bottom:20px;
+  color:#1dbf73;
+}
+
+#transactions{
+  /* border-bottom:1px solid #eee; */
+  /* padding:12px 0; */
+  margin-top:10px;
+  overflow-y:auto;
+  flex:1;                 /* takes remaining height */
+  padding-right:8px;
+}
+
+.transaction{
+  background:#c9f5d3;
+  border:1px solid #eaeaea;
+  border-radius:6px;
+  padding:12px;
+  margin-bottom:10px;
+  transition:background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.transaction:hover{
+  background:#f1fdf7;
+  box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+
+#transactions::-webkit-scrollbar{
+  width:6px;
+}
+
+#transactions::-webkit-scrollbar-thumb{
+  background:#ccc;
+  border-radius:4px;
+}
+
+#transactions span{
+  display:block;
+  font-size:14px;
+  color:#666;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <h3>SmartRide</h3>
+  <div class="nav-links">
+    <a href="homepage.html">Home</a>
+    <a id="walletLink" href="#">Wallet</a>
+    <a id="profileLink" href="#">Profile</a>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+
+  <!-- ADD MONEY -->
+  <div class="left-panel">
+    <h3>Add Money</h3>
+
+    <div class="input-box">
+      <input type="number" id="amount" placeholder="Amount">
+    </div>
+
+    <div class="input-box">
+      <input type="text" placeholder="Card Number">
+    </div>
+
+    <div class="input-box">
+      <input type="text" placeholder="Card Holder Name">
+    </div>
+
+    <div class="input-box">
+      <input type="text" placeholder="MM/YY">
+    </div>
+
+    <div class="input-box">
+      <input type="password" placeholder="CVV">
+    </div>
+
+    <button class="add-btn" onclick="addMoney()">Add to Wallet</button>
+  </div>
+
+  <!-- WALLET INFO -->
+  <div class="right-panel">
+    <div class="balance" id="walletBalance">PKR 0</div>
+
+    <h3>Transaction History</h3>
+    <div id="transactions"></div>
+  </div>
+
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const userId = params.get("userId");
+if (!userId) {
+  window.location.href = "index.html";
+} else {
+  document.getElementById("walletLink").href = `wallet.html?userId=${userId}`;
+  document.getElementById("profileLink").href = `profile.html?userId=${userId}`;
+}
+if (!userId) window.location.href = "index.html";
+
+const API = "http://localhost:3000";
+loadWallet();
+/* Load Wallet */
+async function loadWallet(){
+  const res = await fetch(`${API}/api/wallet?userId=${userId}`);
+  const data = await res.json();
+console.log("data: ", data);
+  document.getElementById("walletBalance").innerText =
+    `PKR ${data.balance}`;
+
+  const container = document.getElementById("transactions");
+  container.innerHTML = "";
+
+  data.transactions.forEach(tx=>{
+    container.innerHTML += `
+      <div class="transaction">
+        <strong>+ PKR ${tx.Amount}</strong>
+        <span>${new Date(tx.CreatedAt).toLocaleString()}</span>
+      </div>
+    `;
+  });
+}
+
+/* Add Money */
+async function addMoney(){
+  const amount = document.getElementById("amount").value;
+  if(!amount || amount <= 0){
+    alert("Enter valid amount");
+    return;
+  }
+
+  await fetch(`${API}/api/wallet/add`,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({userId, amount })
+  });
+
+  loadWallet();
+}
+
+loadWallet();
+</script>
+
+</body>
+</html>
