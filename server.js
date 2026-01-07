@@ -289,7 +289,7 @@ app.post("/api/login", (req, res) => {
 
 app.post("/api/reset-email", async (req, res) => {
   const { email } = req.body;
-console.log("Email: ", email);
+
   try {
     const [rows] = await db.promise().query(
       "SELECT ID FROM Users WHERE Email = ?",
@@ -322,8 +322,6 @@ console.log("Email: ", email);
 
     await transporter.sendMail(mailOptions);
 
-    console.log("✅ OTP sent to:", email, "OTP:", otp);
-
     res.json({ success: true, userId });
 
   } catch (error) {
@@ -334,24 +332,21 @@ console.log("Email: ", email);
 
 app.post("/api/verify-otp", async (req, res) => {
   const { UserEmail, otp } = req.body;
-  console.log("req.body: ", req.body);
+
     const [rows] = await db.promise().query(
       "SELECT ID FROM Users WHERE Email = ?",
       [UserEmail]
     );
 
     const userId = rows[0].ID;
-    console.log(userId);
+
     const [result] = await db.promise().query(
       "SELECT OTP FROM OTPs WHERE UserID = ?",
       [userId]
     );
     const OTP = result[0].OTP;
-    console.log(result[0].OTP);
-    console.log(OTP);
-    console.log(otp);
+
   if (OTP == otp) {
-    console.log("OTP Verified");
     const [row] = await db.promise().query(
       "DELETE FROM OTPs WHERE UserID = ?",
       [userId]
@@ -364,7 +359,6 @@ app.post("/api/verify-otp", async (req, res) => {
 
 app.post("/api/reset-password", async (req, res) => {
   const { UserEmail, newPass } = req.body;
-console.log("req.body: ", req.body);
 
     const [result] = await db.promise().query(
       "SELECT ID FROM Users WHERE Email = ?",
@@ -387,7 +381,6 @@ console.log("req.body: ", req.body);
 // GET WALLET DETAILS
 app.get("/api/wallet", (req, res) => {
   const userId = req.query.userId;
-  console.log("userId: ", userId);
 
   // Check if wallet exists
   db.query(
@@ -428,7 +421,6 @@ app.get("/api/wallet", (req, res) => {
 // ADD MONEY TO WALLET
 app.post("/api/wallet/add", (req, res) => {
   const { userId, amount } = req.body;
-console.log("req.body: ", req.body);
   if (!amount || amount <= 0) {
     return res.status(400).json({ message: "Invalid amount" });
   }
@@ -562,6 +554,143 @@ app.post("/api/profile/update", (req, res) => {
       });
     });
   });
+});
+
+app.post("/api/wallet/deduct", (req, res) => {
+  const { userId, amount, rideId } = req.body;
+
+  if (!userId || !amount) {
+    return res.status(400).json({ success: false, message: "Missing data" });
+  }
+
+  db.beginTransaction(err => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ success: false });
+    }
+
+    db.query(
+      "SELECT * FROM Wallet WHERE UserID = ? FOR UPDATE",
+      [userId],
+      (err, walletResult) => {
+        if (err || walletResult.length === 0) {
+          return db.rollback(() =>
+            res.status(500).json({ message: "Wallet not found" })
+          );
+        }
+
+        const wallet = walletResult[0];
+
+        if (wallet.Balance < amount) {
+          return db.rollback(() =>
+            res.status(400).json({ message: "Insufficient balance" })
+          );
+        }
+
+        const newBalance = wallet.Balance - amount;
+
+        db.query(
+          "UPDATE Wallet SET Balance = ? WHERE WalletID = ?",
+          [newBalance, wallet.WalletID],
+          (err) => {
+            if (err) {
+              console.error(err);
+              return db.rollback(() =>
+                res.status(500).json({ success: false })
+              );
+            }
+
+            db.query(
+              `INSERT INTO WalletTransactions 
+               (WalletID, Amount, Type, CreatedAt)
+               VALUES (?, ?, 'DEBIT', NOW())`,
+              [wallet.WalletID, amount],
+              (err) => {
+                if (err) {
+                  console.error(err);
+                  return db.rollback(() =>
+                    res.status(500).json({ success: false })
+                  );
+                }
+
+                db.commit(err => {
+                  if (err) {
+                    console.error(err);
+                    return db.rollback(() =>
+                      res.status(500).json({ success: false })
+                    );
+                  }
+
+                  res.json({
+                    success: true,
+                    balance: newBalance
+                  });
+                });
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+});
+
+app.post("/api/rides", (req, res) => {
+  const {
+    userId,
+    driverName,
+    pickup,
+    dropoff,
+    fare,
+    paymentMethod
+  } = req.body;
+
+  db.query(
+    `INSERT INTO Rides
+     (UserID, DriverName, PickupLocation, DropoffLocation, Fare, PaymentMethod)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [userId, driverName, pickup, dropoff, fare, paymentMethod],
+    (err, result) => {
+      if (err) return res.status(500).json(err);
+
+      res.json({
+        success: true,
+        rideId: result.insertId
+      });
+    }
+  );
+});
+
+app.get("/api/rides/history", async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    console.log("UserId:", userId);
+
+    const query = `
+      SELECT 
+        RideID,
+        PickupLocation AS pickup_location,
+        DropoffLocation AS dropoff_location,
+        Fare AS fare,
+        PaymentType AS payment_type,
+        RideTime AS ride_time
+      FROM Rides
+      WHERE UserID = ?
+      ORDER BY RideTime DESC
+    `;
+
+    const [rows] = await db.query(query, [userId]);
+    console.log("Rows:", rows);
+
+    res.json({ rides: rows });
+
+  } catch (err) {
+    console.error("🔥 Ride History Error:", err);
+    res.status(500).json({
+      message: "Server error",
+      error: err.message   // 👈 TEMP for debugging
+    });
+  }
 });
 
 /* ---------------- Start Local Server ---------------- */

@@ -208,20 +208,25 @@ if (!userId) window.location.href = "index.html";
 const API = "http://localhost:3000";
 loadWallet();
 /* Load Wallet */
-async function loadWallet(){
+async function loadWallet() {
   const res = await fetch(`${API}/api/wallet?userId=${userId}`);
   const data = await res.json();
-console.log("data: ", data);
+
   document.getElementById("walletBalance").innerText =
     `PKR ${data.balance}`;
 
   const container = document.getElementById("transactions");
   container.innerHTML = "";
 
-  data.transactions.forEach(tx=>{
+  data.transactions.forEach(tx => {
+    const isDebit = tx.Type === "DEBIT";
+    const amount = Number(tx.Amount).toFixed(2);
+
     container.innerHTML += `
-      <div class="transaction">
-        <strong>+ PKR ${tx.Amount}</strong>
+      <div class="transaction ${isDebit ? 'debit' : 'credit'}">
+        <strong>
+          ${isDebit ? '- PKR' : '+ PKR'} ${amount}
+        </strong>
         <span>${new Date(tx.CreatedAt).toLocaleString()}</span>
       </div>
     `;

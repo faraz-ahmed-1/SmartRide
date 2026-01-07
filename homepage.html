@@ -238,6 +238,7 @@
 .driver{
   border-bottom:1px solid #eee;
   padding:12px 0;
+  cursor: pointer;
 }
 
 .driver:last-child{
@@ -264,8 +265,8 @@
   <h3>SmartRide</h3>
 
   <div class="nav-links" id="navLinks">
-    <a href="index.html">Home</a>
-    <a href="#">Favourite</a>
+    <a id="homeLink" href="#">Home</a>
+    <a id="favLink" href="#">Favourite</a>
     <a id="walletLink" href="#">Wallet</a>
     <a id="profileLink" href="#">Profile</a>
   </div>
@@ -293,6 +294,19 @@
   <div id="dropoffSuggestions" class="suggestions"></div>
 </div>
 
+<div
+  id="routeInfo"
+  style="
+    display:none;
+    margin:10px 0;
+    padding:10px;
+    background:#eafaf1;
+    border-radius:6px;
+    font-weight:600;
+    color:#0f8f56;
+  "
+></div>
+
 <div class="input-box">
   <button class="use-location" onclick="useCurrentLocation()">
     📍 Use Current Location
@@ -305,11 +319,6 @@
   </button>
 </div>
 
-    <div class="results">
-      <div class="result-item">Driver 1 • 2 km away</div>
-      <div class="result-item">Driver 2 • 3 km away</div>
-      <div class="result-item">Driver 3 • 5 km away</div>
-    </div>
   </div>
 
   <!-- MAP -->
@@ -337,14 +346,27 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
+let selectedDriver = null;
+let driverMarker = null;
+let rideInterval = null;
+let rideStage = "idle"; // idle | toPickup | toDrop
+let routeCoordinates = [];
+
+const carIcon = L.icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/1048/1048313.png",
+  iconSize: [40, 40],
+  iconAnchor: [20, 20]
+});
+
 const userId = localStorage.getItem("currentUser");
-console.log("userId: ", userId);
 
 if (!userId) {
   window.location.href = "index.html";
 } else {
   document.getElementById("walletLink").href = `wallet.html?userId=${userId}`;
   document.getElementById("profileLink").href = `profile.html?userId=${userId}`;
+  document.getElementById("homeLink").href = `homepage.html?userId=${userId}`;
+  document.getElementById("favLink").href = `history.html?userId=${userId}`;
 }
 
 /* Hamburger */
@@ -465,6 +487,8 @@ async function tryRoute(){
     opacity:0.8
   }).addTo(map);
 
+routeCoordinates = coords; // 🔴 IMPORTANT
+
   map.fitBounds(routeLine.getBounds(), { padding:[50,50] });
 
   showRouteInfo(route.distance, route.duration);
@@ -481,15 +505,207 @@ function showRouteInfo(distance, duration){
 }
 
 /* ---------------- CONFIRM ---------------- */
-function confirmRide(){
-  if(!pickupCoords || !dropoffCoords){
-    alert("Please select pickup and drop-off");
+function confirmRide(driver) {
+  selectedDriver = driver;
+  closePopup();
+
+  rideStage = "toPickup";
+
+  // Fake driver start near pickup
+  const startLat = pickupCoords.lat + (Math.random() * 0.01);
+  const startLng = pickupCoords.lon + (Math.random() * 0.01);
+
+  if (driverMarker) map.removeLayer(driverMarker);
+
+  driverMarker = L.marker([startLat, startLng], {
+    icon: L.icon({
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/1048/1048313.png",
+      iconSize: [40, 40]
+    })
+  }).addTo(map).bindPopup("Driver on the way");
+
+  animateMarker(
+    driverMarker,
+    [startLat, startLng],
+    [pickupCoords.lat, pickupCoords.lon],
+    onReachPickup
+  );
+}
+
+function animateAlongRoute(marker, route, onComplete) {
+  let i = 0;
+
+  function move() {
+    if (i >= route.length - 1) {
+      onComplete && onComplete();
+      return;
+    }
+
+    const current = route[i];
+    const next = route[i + 1];
+
+    // Calculate angle
+    const angle = Math.atan2(
+      next[1] - current[1],
+      next[0] - current[0]
+    ) * 180 / Math.PI;
+
+    const el = marker.getElement();
+    if (el) {
+      el.style.transformOrigin = "center";
+      el.style.transform = `rotate(${angle}deg)`;
+    }
+
+    marker.setLatLng(current);
+    i++;
+
+    setTimeout(move, 40); // speed control
+  }
+
+  move();
+}
+
+function animateMarker(marker, start, end, callback) {
+  let step = 0;
+  const steps = 100;
+
+  const latDiff = (end[0] - start[0]) / steps;
+  const lngDiff = (end[1] - start[1]) / steps;
+
+  const angle = Math.atan2(
+    end[1] - start[1],
+    end[0] - start[0]
+  ) * 180 / Math.PI;
+
+  marker.getElement().style.transform += ` rotate(${angle}deg)`;
+
+  clearInterval(rideInterval);
+
+  rideInterval = setInterval(() => {
+    if (step >= steps) {
+      clearInterval(rideInterval);
+      callback();
+      return;
+    }
+
+    const lat = start[0] + latDiff * step;
+    const lng = start[1] + lngDiff * step;
+
+    marker.setLatLng([lat, lng]);
+    step++;
+  }, 50);
+}
+
+function onReachPickup() {
+  driverMarker.bindPopup(`
+    <strong>Your driver has reached!</strong><br><br>
+    <button onclick="startRide()"
+      style="padding:6px 10px;background:#1dbf73;color:#fff;border:none;border-radius:5px;">
+      Coming
+    </button>
+  `).openPopup();
+}
+
+function startRide() {
+  driverMarker.closePopup();
+
+  animateAlongRoute(driverMarker, routeCoordinates, () => {
+    onRideCompleted();
+  });
+}
+
+function onRideCompleted() {
+  driverMarker.bindPopup(`
+    ✅ Ride Completed<br>
+    Fare: <b>PKR ${selectedDriver.fare}</b><br><br>
+    <button onclick="payWallet()">Pay Wallet</button>
+    <button onclick="payCash()">Pay Cash</button>
+  `).openPopup();
+}
+
+async function showPaymentOptions() {
+  const walletBalance = await getWalletBalance(); // API call
+  const color = walletBalance >= selectedDriver.fare ? "green" : "red";
+
+  document.getElementById("paymentBox").innerHTML = `
+    <div style="margin-top:10px;">
+      <div style="color:${color};font-weight:bold;">
+        Wallet Balance: PKR ${walletBalance}
+      </div><br>
+
+      <button onclick="payCash()"
+        style="padding:6px 10px;margin-right:5px;">
+        Cash
+      </button>
+
+      <button onclick="payWallet(${walletBalance})"
+        ${walletBalance < selectedDriver.fare ? "disabled" : ""}
+        style="padding:6px 10px;">
+        Wallet
+      </button>
+    </div>
+  `;
+}
+
+async function getWalletBalance() {
+  const res = await fetch(`${API}/api/wallet?userId=${userId}`);
+  const data = await res.json();
+  return data.balance;
+}
+
+async function payCash() {
+  await fetch(`http://localhost:3000/api/rides`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      driverName: selectedDriver.name,
+      pickup: pickupInput.value,
+      dropoff: dropoffInput.value,
+      fare: selectedDriver.fare,
+      paymentMethod: "Cash"
+    })
+  });
+
+  alert("Cash payment selected 🚕");
+}
+
+async function payWallet() {
+  // Save ride first
+  const rideRes = await fetch(`http://localhost:3000/api/rides`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      driverName: selectedDriver.name,
+      pickup: pickupInput.value,
+      dropoff: dropoffInput.value,
+      fare: selectedDriver.fare,
+      paymentMethod: "Wallet"
+    })
+  });
+
+  const rideData = await rideRes.json();
+
+  // Deduct wallet
+  const res = await fetch(`http://localhost:3000/api/wallet/deduct`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId,
+      amount: selectedDriver.fare,
+      rideId: rideData.rideId
+    })
+  });
+
+  const data = await res.json();
+
+  if (!data.success) {
+    alert("Payment failed");
     return;
   }
-  alert("Route confirmed. Proceeding...");
 
-  // 👉 NEXT STEP IDEA:
-  // window.location.href = "ride-options.html";
+  alert("Payment successful via Wallet ✅");
 }
 
 const sampleDrivers = [
@@ -499,8 +715,8 @@ const sampleDrivers = [
 ];
 
 function showDrivers() {
-  const pickup = document.getElementById("pickup").value;
-  const drop = document.getElementById("drop").value;
+  const pickup = document.getElementById("pickupInput").value;
+  const drop = document.getElementById("dropoffInput").value;
 
   if (!pickup || !drop) {
     alert("Please enter both pickup and drop locations!");
@@ -514,16 +730,19 @@ function showDrivers() {
   list.innerHTML = "";
 
   // Loop through drivers
-  sampleDrivers.forEach(driver => {
-    list.innerHTML += `
-      <div class="driver">
-        <strong>${driver.name} (${driver.car})</strong>
-        <span>Fare: PKR ${driver.fare}</span>
-        <span>ETA: ${driver.eta}</span>
-        <span>Total Duration: ${driver.duration}</span>
-      </div>
-    `;
-  });
+sampleDrivers.forEach(driver => {
+  list.innerHTML += `
+    <div class="driver">
+      <strong>${driver.name} (${driver.car})</strong>
+      <span>Fare: PKR ${driver.fare}</span><br>
+      <span>ETA: ${driver.eta}</span><br>
+      <button onclick='confirmRide(${JSON.stringify(driver)})'
+        style="margin-top:8px;padding:6px 10px;background:#1dbf73;color:#fff;border:none;border-radius:5px;">
+        Select Driver
+      </button>
+    </div>
+  `;
+});
 
   popup.style.display = "flex";
 }

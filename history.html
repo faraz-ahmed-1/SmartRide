@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ride History</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .history-container {
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .ride-card {
+      background: #eaffea; /* light green */
+      border-left: 6px solid #28a745;
+      padding: 15px 20px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 20px;
+    }
+
+    .ride-card strong {
+      color: #333;
+    }
+
+    .ride-card span {
+      color: #555;
+    }
+
+    .fare {
+      color: #0a7c2f;
+      font-weight: bold;
+    }
+
+    .payment {
+      text-transform: capitalize;
+    }
+
+    .empty {
+      text-align: center;
+      color: #888;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🚕 Ride History</h2>
+
+  <div class="history-container" id="rideHistory"></div>
+
+  <script>
+    const API = "http://localhost:3000"; // change if needed
+const userId = localStorage.getItem("currentUser");
+
+    async function loadRideHistory() {
+      const res = await fetch(`${API}/api/rides/history?userId=${userId}`);
+      const data = await res.json();
+
+      const container = document.getElementById("rideHistory");
+      container.innerHTML = "";
+
+      if (!data.rides || data.rides.length === 0) {
+        container.innerHTML = `<div class="empty">No ride history found</div>`;
+        return;
+      }
+
+      data.rides.forEach(ride => {
+        container.innerHTML += `
+          <div class="ride-card">
+            <div><strong>Pickup:</strong> <span>${ride.pickup_location}</span></div>
+            <div><strong>Drop-off:</strong> <span>${ride.dropoff_location}</span></div>
+
+            <div><strong>Fare:</strong> <span class="fare">PKR ${ride.fare}</span></div>
+            <div><strong>Payment:</strong> <span class="payment">${ride.payment_type}</span></div>
+
+            <div><strong>Ride Time:</strong> <span>
+              ${new Date(ride.ride_time).toLocaleString()}
+            </span></div>
+          </div>
+        `;
+      });
+    }
+
+    loadRideHistory();
+  </script>
+
+</body>
+</html>
